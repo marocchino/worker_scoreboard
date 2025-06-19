@@ -25,6 +25,7 @@ class WorkerScoreboard
   end
 
   def update(status)
+    status.encode!('UTF-8') if [Encoding::UTF_8, Encoding::BINARY].none?(status.encoding)
     if !@fh.nil? && @id_for_fh != worker_id
       @fh.close
       @fh = nil
@@ -41,7 +42,7 @@ class WorkerScoreboard
       @id_for_fh = worker_id
     end
     @fh.seek 0 or raise "seek failed:#{$!}";
-    @fh.write("#{Digest::MD5.digest(status)}#{[status.length].pack("N*")}#{status}")
+    @fh.write("#{Digest::MD5.digest(status)}#{[status.bytesize].pack("N*")}#{status.b}")
     @fh.flush
   end
 
@@ -56,7 +57,7 @@ class WorkerScoreboard
         size = data[16, 4].unpack("N*")
         status = data[20, size[0]]
         next if Digest::MD5.digest(status) != md5
-        ret[id] = status
+        ret[id] = status.force_encoding('UTF-8')
         break
       end
       #warn "failed to read status of id:#{id}, skipping"
